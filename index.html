@@ -101,4 +101,42 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 
 let spin=0;
 function flip(pick){
-  if(S
+  if(S.coins<10)return;
+  const res=Math.random()<.5?"heads":"tails";
+  spin+=720+(res==="tails"?180:0);
+  $("coin").style.transform="rotateY("+spin+"deg)";
+  S.flips++;
+  const win=res===pick;S.coins+=win?10:-10;
+  $("msg").style.color=win?"var(--teal)":"var(--red)";
+  $("msg").textContent=(res==="heads"?"Орёл":"Решка")+": "+(win?"+10 монет":"−10 монет");
+  buzz(win?"success":"error");render();
+}
+$("heads").onclick=()=>flip("heads");$("tails").onclick=()=>flip("tails");
+
+let hits=0,left=10,timer=null;
+const tgt=$("target");
+function moveTarget(){
+  const f=$("field");
+  tgt.style.left=Math.random()*(f.clientWidth-56)+"px";
+  tgt.style.top=Math.random()*(f.clientHeight-56)+"px";
+}
+$("start").onclick=()=>{
+  if(timer)return;
+  hits=0;left=10;$("hits").textContent=0;$("left").textContent=10;
+  tgt.style.display="block";moveTarget();$("start").disabled=true;
+  timer=setInterval(()=>{
+    left--;$("left").textContent=left;
+    if(left<=0){
+      clearInterval(timer);timer=null;tgt.style.display="none";$("start").disabled=false;
+      S.coins+=hits;if(hits>S.best)S.best=hits;buzz("success");render();
+    }
+  },1000);
+};
+tgt.onpointerdown=e=>{e.preventDefault();if(!timer)return;hits++;$("hits").textContent=hits;moveTarget();};
+
+$("bonus").onclick=()=>{S.coins+=50;S.bonus=new Date().toDateString();buzz("success");render();};
+render();
+</script>
+</body>
+</html>
+

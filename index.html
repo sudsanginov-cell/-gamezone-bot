@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Игровой клуб</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#0e1220;--panel:#181e33;--line:#262e4a;--text:#eef1fb;--dim:#8a93b3;--gold:#f5b93a;--teal:#3dd6c3;--red:#ff6b7a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 16px 90px;user-select:none}
+header{padding:20px 0 8px;text-align:center}
+.bal{font-size:56px;font-weight:800;color:var(--gold);letter-spacing:-1px}
+.bal small{display:block;font-size:14px;font-weight:500;color:var(--dim);letter-spacing:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}
+h2{margin:0 0 4px;font-size:18px}
+p{margin:0 0 12px;color:var(--dim);font-size:14px}
+button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 16px;background:var(--gold);color:#241a00}
+button.alt{background:var(--line);color:var(--text)}
+button:disabled{opacity:.4}
+button:active{transform:scale(.97)}
+.row{display:flex;gap:10px}.row button{flex:1}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--panel);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;background:none;color:var(--dim);font-size:13px;padding:8px}
+nav button.on{color:var(--gold)}
+nav span{display:block;font-size:22px}
+.tab{display:none}.tab.on{display:block}
+#coin{width:110px;height:110px;margin:8px auto 14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe08a,var(--gold) 60%,#b9801a);display:grid;place-items:center;font-size:44px;transition:transform .6s}
+#msg{min-height:22px;text-align:center;font-weight:700}
+#field{position:relative;height:260px;background:var(--bg);border-radius:14px;border:1px dashed var(--line);overflow:hidden;touch-action:manipulation}
+#target{position:absolute;width:56px;height:56px;border-radius:50%;background:var(--teal);display:none;font-size:26px;text-align:center;line-height:56px}
+.top{display:flex;justify-content:space-between;margin-bottom:8px;font-weight:700}
+.me{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){#coin{transition:none}}
+</style>
+</head>
+<body>
+<header><div class="bal"><span id="coins">0</span><small>монет</small></div></header>
+
+<section class="tab on" id="t-play">
+  <div class="card">
+    <h2>Монетка</h2><p>Ставка 10 монет. Угадал — получаешь ещё 10.</p>
+    <div id="coin">🪙</div>
+    <div id="msg"></div>
+    <div class="row"><button id="heads">Орёл</button><button id="tails">Решка</button></div>
+  </div>
+  <div class="card">
+    <h2>Ловец</h2><p>10 секунд. Жми на шарик — каждое попадание даёт монету.</p>
+    <div class="top"><span>Попаданий: <b id="hits">0</b></span><span>Осталось: <b id="left">10</b></span></div>
+    <div id="field"><div id="target">⭐</div></div>
+    <div class="row" style="margin-top:10px"><button id="start" class="alt">Начать</button></div>
+  </div>
+</section>
+
+<section class="tab" id="t-top">
+  <div class="card"><h2>Рейтинг</h2><p>Лучший результат в «Ловце».</p>
+    <div class="me"><span id="who">Ты</span><b id="best">0</b></div>
+    <p style="margin-top:12px">Общий рейтинг игроков появится, когда подключим сервер.</p></div>
+</section>
+
+<section class="tab" id="t-me">
+  <div class="card"><h2 id="name">Игрок</h2><p>Профиль</p>
+    <div class="me"><span>Монет</span><b id="p-coins">0</b></div>
+    <div class="me"><span>Бросков монетки</span><b id="p-flips">0</b></div>
+    <div class="me"><span>Рекорд в «Ловце»</span><b id="p-best">0</b></div></div>
+  <div class="card"><h2>Ежедневный бонус</h2><p>50 монет раз в сутки.</p>
+    <button id="bonus">Забрать 50 монет</button></div>
+</section>
+
+<nav>
+  <button class="on" data-t="t-play"><span>🎮</span>Играть</button>
+  <button data-t="t-top"><span>🏆</span>Рейтинг</button>
+  <button data-t="t-me"><span>👤</span>Профиль</button>
+</nav>
+
+<script>
+const tg=window.Telegram&&Telegram.WebApp;if(tg){tg.ready();tg.expand();}
+const $=id=>document.getElementById(id);
+let S={coins:100,best:0,flips:0,bonus:""};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem("g1")||"{}"))}catch(e){}
+const save=()=>{try{localStorage.setItem("g1",JSON.stringify(S))}catch(e){}};
+const user=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user;
+const uname=user?(user.first_name||user.username):"Игрок";
+$("name").textContent=uname;$("who").textContent=uname;
+
+function render(){
+  $("coins").textContent=S.coins;$("p-coins").textContent=S.coins;
+  $("p-flips").textContent=S.flips;$("p-best").textContent=S.best;$("best").textContent=S.best;
+  $("heads").disabled=$("tails").disabled=S.coins<10;
+  const today=new Date().toDateString();
+  $("bonus").disabled=S.bonus===today;
+  $("bonus").textContent=S.bonus===today?"Бонус уже получен. Приходи завтра":"Забрать 50 монет";
+  save();
+}
+const buzz=t=>{try{tg&&tg.HapticFeedback.notificationOccurred(t)}catch(e){}};
+
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button,.tab").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");$(b.dataset.t).classList.add("on");
+});
+
+let spin=0;
+function flip(pick){
+  if(S
